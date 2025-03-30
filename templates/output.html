@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <header>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Таблица</title>
+      <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+  </header>
+  <body>
+  <div class="container d-flex justify-content-center">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="thead-dark">
+                <tr class="text-center">
+                    <th>Слово</th>
+                    <th>tf</th>
+                    <th>idf</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for word, idf_value in words %}
+                <tr>
+                    <td>{{ word }}</td>
+                    <td>{{ tf[word] }}</td>
+                    <td>{{ idf_value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+  </body>
+</html>
