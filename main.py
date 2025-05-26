@@ -34,4 +34,3 @@ async def get_output(request: Request):
     return templates.TemplateResponse(
         request=request, name="output.html", context=context
     )
-

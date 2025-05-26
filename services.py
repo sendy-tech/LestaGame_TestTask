@@ -3,11 +3,12 @@ import random
 import re
 from collections import Counter
 from http import HTTPStatus
+from typing import Any
 
 from fastapi import UploadFile, HTTPException
 
 
-async def get_text(file: UploadFile) -> str:
+async def get_text(file: UploadFile) -> str | None:
     try:
         content = await file.read()
         text = content.decode()
@@ -32,7 +33,7 @@ async def term_frequency(text: str) -> Counter:
     return word_tf
 
 
-async def inverse_document_frequency(words: Counter) -> list[tuple[str, int]]:
+async def inverse_document_frequency(words: Counter) -> list[tuple[Any, float]]:
     dict_idf = {}
     total_docs = 100_000_000
     for word in words:
