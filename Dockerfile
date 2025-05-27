@@ -1,39 +1,18 @@
-FROM python:latest
+FROM python:3.11-slim AS builder
 
-# Устанавливаем рабочую директорию внутри контейнера
-#WORKDIR /app
-
-
-# Копируем файлы зависимостей
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 COPY requirements.txt .
+RUN pip install --user -r requirements.txt
+COPY main.py services.py ./
+COPY static ./static
 
-# Устанавливаем зависимости
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копируем содержимое текущей директории в контейнер
-COPY . .
-
-EXPOSE 8080
-# Настраиваем запуск нашего приложения
-CMD ["uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"]
-
-
-#FROM python:latest as build
-#
-## Копируем файлы зависимостей
-#COPY requirements.txt .
-#
-## Устанавливаем зависимости
-#RUN pip install --no-cache-dir -r requirements.txt
-#
-## Копируем содержимое текущей директории в контейнер
-#COPY . .
-#
-#WORKDIR /src
-#
-#FROM alpine:3.21 as production
-#COPY --from=build /bin /bin/main
-#EXPOSE 8080
-#
-## Настраиваем запуск нашего приложения
-#CMD ["uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8080"]
+FROM python:3.11-slim
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+WORKDIR /app
+COPY --from=builder /app .
+EXPOSE 8000
+CMD ["python", "main.py"]
