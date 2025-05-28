@@ -14,5 +14,6 @@ COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 WORKDIR /app
 COPY --from=builder /app .
-EXPOSE 8000
-CMD ["python", "main.py"]
+EXPOSE 80
+#CMD ["python", "main.py"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

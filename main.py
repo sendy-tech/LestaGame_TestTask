@@ -6,12 +6,12 @@ from services import (get_text, inverse_document_frequency, term_frequency)
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-if __name__ == "__main__":
-    uvicorn.run(
-        app="main:app",
-        port=8000,
-        reload=True,
-    )
+# if __name__ == "__main__":
+#     uvicorn.run(
+#         app="main:app",
+#         port=80,
+#         reload=True,
+#     )
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
