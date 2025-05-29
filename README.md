@@ -13,7 +13,7 @@
 - Jinja2 3.1.6
 - python-multipart 0.0.20
 - uvicorn 0.32.1
-- PostgreSQL 17
+- PostgreSQL 15
 
 ### 📁 Структура проекта
 project/
