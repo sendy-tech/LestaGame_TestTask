@@ -3,20 +3,40 @@ from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from contextlib import asynccontextmanager
+
 from services import get_text, inverse_document_frequency, term_frequency
-from database import async_session
+from database import async_session, engine
 from models import FileUpload, WordStat
-from sqlalchemy import insert,select, func
+from sqlalchemy import insert, select, func
+from database import Base
+import logging
+logger = logging.getLogger(__name__)
 
-VERSION = "0.0.1"  # Версия
+VERSION = "0.0.1"
 
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("✅ DB initialized.")
+    except Exception as e:
+        logger.exception(f"❌ Failed to initialize DB: {e}")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.get('/', response_class=HTMLResponse)
 async def get_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
+
 
 @app.post('/uploadfile', response_class=RedirectResponse)
 async def handle_upload(file: UploadFile = File()):
@@ -35,26 +55,32 @@ async def handle_upload(file: UploadFile = File()):
             ])
     return RedirectResponse(url="/output", status_code=HTTPStatus.SEE_OTHER)
 
+
 @app.get('/output', response_class=HTMLResponse)
 async def get_output(request: Request):
     async with async_session() as session:
-        result = await session.execute(select(WordStat).order_by(WordStat.id.desc()).limit(50))
-        words = result.all()
-        tf = {w.word: w.tf for w in words}
+        result = await session.execute(
+            select(WordStat).order_by(WordStat.id.desc()).limit(50)
+        )
+        word_stats = result.scalars().all()  # Возвращает список объектов WordStat
+
+        # Словарь tf: {слово: tf}
+        tf = {ws.word: ws.tf for ws in word_stats}
+
+        # Список (слово, idf)
+        words = [(ws.word, ws.idf) for ws in word_stats]
 
     context = {"words": words, "tf": tf}
     return templates.TemplateResponse(request=request, name="output.html", context=context)
 
-#/status
+
 @app.get('/status')
 async def status():
     return JSONResponse(content={"status": "OK"})
 
-#/metrics
+
 @app.get('/metrics')
 async def metrics():
-    # total_uploads — сколько было успешных загрузок файлов, можно мониторить нагрузку
-    # last_upload — сколько уникальных слов в последней обработанной загрузке, чтобы оценить объем текста
     async with async_session() as session:
         total_uploads = await session.scalar(select(func.count()).select_from(FileUpload))
         last_upload = await session.scalar(
@@ -66,7 +92,7 @@ async def metrics():
         "unique_words": unique_words
     })
 
-#/version
+
 @app.get('/version')
 async def version():
     return JSONResponse(content={"version": VERSION})
