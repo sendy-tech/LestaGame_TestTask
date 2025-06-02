@@ -18,4 +18,4 @@ ENV PATH=/root/.local/bin:$PATH
 WORKDIR /app
 RUN chmod +x wait-for-postgres.sh
 
-CMD ["sh", "-c", "app/wait-for-postgres.sh postgres python app/init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "app/wait-for-postgres.sh postgres python app/init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --limit-concurrency 100 --timeout-keep-alive 10"]

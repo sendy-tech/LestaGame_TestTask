@@ -7,29 +7,38 @@
 - TF (частота встречаемости в тексте)
 - IDF (обратная частота документа)
 
-
 ### ⚙️ Стек технологий
 - FastAPI 0.115.0
 - Jinja2 3.1.6
-- python-multipart 0.0.20
-- uvicorn 0.32.1
+- Python-multipart 0.0.20
+- Psycopg2-binary 2.9.10
+- Python-dotenv 1.0.1
+- Uvicorn 0.32.1
+- SQLAlchemy 2.0.30
+- asyncpg 0.29.0
 - PostgreSQL 15
 
 ### 📁 Структура проекта
-project/
-│<br />
-├── main.py # Основное приложение FastAPI<br />
-├── services.py # Логика обработки текста (TF/IDF)<br />
-├── templates/ # HTML-шаблоны (Jinja2)<br />
-│ ├── index.html<br />
-│ └── output.html<br />
-├── static/ # Статические файлы<br />
-│ └── styles.css<br />
-├── requirements.txt # Зависимости Python<br />
-├── Dockerfile # Инструкция сборки образа приложения<br />
-├── compose.yaml # Docker Compose для запуска <br />
-├── .env # Переменные окружения<br />
-└── README.md # Документация проекта
+project/<br />
+├── app  <span style="color:green"># Основная директория приложения.</span><br />
+│   ├── static <span style="color:green"># Статические файлы</span><br />
+│   │   └── styles.css <span style="color:green"># Таблица стилей</span><br />
+│   ├── templates <span style="color:green"># Папка с HTML-шаблонами</span><br />
+│   │   ├── index.html <span style="color:green"># Начальная форма для загрузки файла</span><br />
+│   │   └── output.html <span style="color:green"># Результаты анализа текста.</span><br />
+│   ├── database.py <span style="color:green"># Настройка подключения к базе данных.</span><br />
+│   ├── init_db.py <span style="color:green"> # Инициализация базы данных</span><br />
+│   ├── main.py <span style="color:green"># Основное приложение FastAPI</span><br />
+│   ├── models.py<span style="color:green"> # Содержит ORM-модели</span><br />
+│   ├── requirements.txt <span style="color:green"># Зависимости Python</span><br />
+│   ├── services.py <span style="color:green"># Логика обработки текста</span><br />
+│   └── wait-for-postgres.sh<span style="color:green"> # Скрипт ожидания запуска PostgreSQL</span><br />
+├── .env <span style="color:green"># Переменные окружения</span><br />
+├── .gitignore<span style="color:green"># Указание Git игнорируемых файлов</span><br />
+├── compose.yaml <span style="color:green"># Docker Compose для запуска</span><br />
+├── Dockerfile <span style="color:green"># Инструкция сборки образа приложения</span><br />
+└── README.md <span style="color:green"># Документация проекта</span><br />
+
 ### Project run
 
 - Run the application:  

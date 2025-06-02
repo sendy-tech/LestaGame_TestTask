@@ -1,33 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
-  <header>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Таблица</title>
-      <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
-  </header>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <style>
+      .navbar {
+        background-color: #136620;
+        color: white;
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 18px;
+      }
+
+      .navbar a {
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+      }
+
+      .navbar a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
   <body>
-  <div class="container d-flex justify-content-center">
-    <div class="table-responsive">
-        <table class="table table-striped table-hover table-bordered">
-            <thead class="thead-dark">
-                <tr class="text-center">
-                    <th>Слово</th>
-                    <th>tf</th>
-                    <th>idf</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for word, idf_value in words %}
-                <tr>
-                    <td>{{ word }}</td>
-                    <td>{{ tf[word] }}</td>
-                    <td>{{ idf_value }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+    <!-- Верхняя панель -->
+    <div class="navbar">
+      <div>Результаты анализа</div>
+      <a href="/">Загрузить другой файл</a>
     </div>
-</div>
+
+    <div class="container d-flex justify-content-center">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover table-bordered">
+          <thead class="thead-dark">
+            <tr class="text-center">
+              <th>Слово</th>
+              <th>tf</th>
+              <th>idf</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for word, idf_value in words %}
+            <tr>
+              <td>{{ word }}</td>
+              <td>{{ tf[word] }}</td>
+              <td>{{ idf_value }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </body>
 </html>
