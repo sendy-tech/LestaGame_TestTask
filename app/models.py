@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, func, ForeignKey
-from database import Base
+from app.database import Base
 
 # Модель загрузки файла
 class FileUpload(Base):
+    __tablename__ = "file_uploads"
     """
     Представляет загруженный файл.
 
@@ -10,12 +11,10 @@ class FileUpload(Base):
     - дату/время загрузки
     - количество уникальных слов
     """
-    __tablename__ = "file_uploads"
-
-    id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, server_default=func.now(), nullable=False)
-    unique_words = Column(Integer, nullable=False)
-
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    timestamp = Column(DateTime, server_default=func.now())
+    unique_words = Column(Integer)
 
 # Модель статистики слов
 class WordStat(Base):
@@ -30,8 +29,8 @@ class WordStat(Base):
     """
     __tablename__ = "word_stats"
 
-    id = Column(Integer, primary_key=True, index=True)
-    file_id = Column(Integer, ForeignKey("file_uploads.id"), nullable=False)
-    word = Column(String, nullable=False)
-    tf = Column(Float, nullable=False)
-    idf = Column(Float, nullable=False)
+    id = Column(Integer, primary_key=True)
+    file_id = Column(Integer, ForeignKey("file_uploads.id", ondelete="CASCADE"))
+    word = Column(String)
+    tf = Column(Float)
+    idf = Column(Float)

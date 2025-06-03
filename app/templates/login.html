@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div class="navbar">
+    <div>Вход</div>
+    <div><a href="/">На главную</a></div>
+</div>
+
+<div class="form-container">
+    <h2>Вход</h2>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form action="/auth/login" method="post">
+        <label for="username">Имя пользователя:</label><br>
+        <input type="text" name="username" required><br><br>
+
+        <label for="password">Пароль:</label><br>
+        <input type="password" name="password" required><br><br>
+
+        <button type="submit">Войти</button>
+    </form>
+
+    <p class="small-text">
+        Ещё нет аккаунта? <a href="/auth/register">Регистрация</a>
+    </p>
+</div>
+
+</body>
+</html>

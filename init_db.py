@@ -1,5 +1,5 @@
 import asyncio
-from database import engine, Base
+from app.database import engine, Base
 
 async def init():
     async with engine.begin() as conn:
