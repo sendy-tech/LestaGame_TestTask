@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Управление аккаунтом</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="navbar">
+    <div>Мой Сервис</div>
+    <div>
+      <a href="/">Главная</a>
+      <a href="/auth/logout">Выйти</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Управление аккаунтом</h2>
+
+    {% if error %}
+      <div class="flash-error">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="flash-success">{{ success }}</div>
+    {% endif %}
+
+    <h3>Сменить пароль</h3>
+    <form method="post" action="/auth/change-password" id="change-password-form">
+      <label for="old_password">Старый пароль:</label>
+      <input type="password" name="old_password" required>
+
+      <label for="new_password">Новый пароль:</label>
+      <div class="password-field">
+        <input type="password" id="new_password" name="new_password" required oninput="updatePasswordUI()">
+        <span class="toggle" onclick="toggleVisibility('new_password')">👁️</span>
+      </div>
+
+      <label for="confirm_password">Подтверждение пароля:</label>
+      <div class="password-field">
+        <input type="password" id="confirm_password" name="confirm_password" required oninput="updatePasswordUI()">
+        <span class="toggle" onclick="toggleVisibility('confirm_password')">👁️</span>
+      </div>
+
+      <div class="password-meter">
+        <div id="strength-bar" class="strength-bar"></div>
+      </div>
+
+      <small id="password_hint" class="hint">Пароль должен быть не менее 8 символов, содержать буквы и цифры.</small><br>
+      <small id="match_hint" class="hint"></small>
+
+      <button type="submit" id="submit-btn" disabled>Сменить пароль</button>
+    </form>
+
+    <hr>
+
+    <h3>Удалить аккаунт</h3>
+    <form method="post" action="/auth/delete-account" onsubmit="return confirm('Вы уверены, что хотите удалить аккаунт? Это действие необратимо.')">
+      <button type="submit" class="danger">Удалить аккаунт</button>
+    </form>
+  </div>
+
+  <script>
+    function toggleVisibility(id) {
+      const input = document.getElementById(id);
+      input.type = input.type === "password" ? "text" : "password";
+    }
+
+    function updatePasswordUI() {
+      const password = document.getElementById("new_password").value;
+      const confirm = document.getElementById("confirm_password").value;
+      const submit = document.getElementById("submit-btn");
+      const hint = document.getElementById("password_hint");
+      const matchHint = document.getElementById("match_hint");
+      const strengthBar = document.getElementById("strength-bar");
+
+      const lengthValid = password.length >= 8;
+      const hasLetter = /[A-Za-z]/.test(password);
+      const hasDigit = /\d/.test(password);
+
+      if (!lengthValid || !hasLetter || !hasDigit) {
+        hint.textContent = "Пароль должен быть не менее 8 символов, содержать буквы и цифры.";
+        hint.style.color = "red";
+      } else {
+        hint.textContent = "Пароль соответствует требованиям.";
+        hint.style.color = "green";
+      }
+
+      if (confirm === "") {
+        matchHint.textContent = "";
+      } else if (password !== confirm) {
+        matchHint.textContent = "Пароли не совпадают.";
+        matchHint.style.color = "red";
+      } else {
+        matchHint.textContent = "Пароли совпадают.";
+        matchHint.style.color = "green";
+      }
+
+      let score = 0;
+      if (lengthValid) score++;
+      if (hasLetter) score++;
+      if (hasDigit) score++;
+
+      const colors = ["#e74c3c", "#f39c12", "#2ecc71"];
+      strengthBar.style.width = `${score * 33}%`;
+      strengthBar.style.backgroundColor = colors[score - 1] || "#ddd";
+
+      submit.disabled = !(lengthValid && hasLetter && hasDigit && password === confirm);
+    }
+  </script>
+</body>
+</html>

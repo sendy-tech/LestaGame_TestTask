@@ -24,7 +24,13 @@
         <input type="text" name="username" required><br><br>
 
         <label for="password">Пароль:</label><br>
-        <input type="password" name="password" required><br><br>
+        <input type="password" id="password" name="password" required><br>
+
+        {% if password_hint %}
+            <p class="hint">{{ password_hint }}</p>
+        {% endif %}
+
+        <div id="password-strength" class="password-strength"></div><br>
 
         <button type="submit">Зарегистрироваться</button>
     </form>
@@ -33,6 +39,28 @@
         Уже есть аккаунт? <a href="/auth/login">Войти</a>
     </p>
 </div>
+
+<script>
+    const passwordInput = document.getElementById("password");
+    const strengthDisplay = document.getElementById("password-strength");
+
+    passwordInput.addEventListener("input", () => {
+        const val = passwordInput.value;
+        let strength = 0;
+
+        if (val.length >= 8) strength++;
+        if (/[A-Z]/.test(val)) strength++;
+        if (/[a-z]/.test(val)) strength++;
+        if (/\d/.test(val)) strength++;
+        if (/[\W_]/.test(val)) strength++;
+
+        const labels = ["Очень слабый", "Слабый", "Средний", "Хороший", "Надёжный"];
+        const colors = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#27ae60"];
+
+        strengthDisplay.textContent = "Надёжность: " + labels[Math.min(strength - 1, labels.length - 1)];
+        strengthDisplay.style.color = colors[Math.min(strength - 1, colors.length - 1)];
+    });
+</script>
 
 </body>
 </html>

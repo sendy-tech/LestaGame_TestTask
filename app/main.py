@@ -1,6 +1,7 @@
 import logging, os
 from http import HTTPStatus
 from contextlib import asynccontextmanager
+from urllib.parse import unquote
 
 from fastapi import FastAPI, File, Request, UploadFile, Depends
 from fastapi.templating import Jinja2Templates
@@ -53,10 +54,13 @@ async def lifespan(app: FastAPI):
 # Главная страница: отображает форму и приветствие
 @app.get("/", response_class=HTMLResponse)
 async def get_root(request: Request, current_user: User = Depends(get_current_user_optional)):
+    logger.info(f"Запрос на /: query_params={request.query_params}")
     # Проверка авторизации
     if not current_user:
         return RedirectResponse(url="/auth/login", status_code=HTTPStatus.SEE_OTHER)
     msg = request.cookies.get("msg")
+    if msg:
+        msg = unquote(msg)
     response = templates.TemplateResponse(
         request=request,
         name="index.html",

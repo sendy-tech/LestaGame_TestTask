@@ -12,6 +12,7 @@
     <div>
         {% if current_user %}
             <span>Привет, {{ current_user.username }}!</span>
+            <a href="/auth/account">Настройки аккаунта</a>
             <a href="/auth/logout">Выйти</a>
         {% else %}
             <a href="/auth/login">Войти</a>
