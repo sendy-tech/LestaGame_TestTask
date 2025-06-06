@@ -1,20 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Результаты анализа</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Результаты анализа{% endblock %}
+{% block navbar_title %}Результаты анализа{% endblock %}
 
-<div class="navbar">
-    <div>Результаты анализа</div>
-    <div>
-        <a href="/">Загрузить другой файл</a>
-        <a href="/auth/logout">Выйти</a>
-    </div>
-</div>
-
+{% block content %}
 <div class="container wide-container">
     <table class="styled-table full-width">
         <thead>
@@ -35,6 +23,4 @@
         </tbody>
     </table>
 </div>
-
-</body>
-</html>
+{% endblock %}

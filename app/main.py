@@ -1,46 +1,32 @@
-import logging, os
-from http import HTTPStatus
+import logging
+import os
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
+from http import HTTPStatus
 from urllib.parse import unquote
 
-from fastapi import FastAPI, File, Request, UploadFile, Depends
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request, UploadFile, File, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import insert, select, func
-
+from app.database import async_session, engine, Base, get_db
+from app.auth.dependencies import get_current_user
+from app.models.user import User
+from app.models.document import FileUpload, WordStat
+from app.routes.html_routes import router as html_router
+from app.routes.api_routes import router as api_router
 from app.services import get_text, term_frequency, inverse_document_frequency
-from app.database import async_session, engine, Base
-from app.models import FileUpload, WordStat
-from app.auth.routes import router as auth_router
-from app.auth.dependencies import get_current_user_optional
-from app.auth.auth_models import User
+from app.crud.document_crud import get_user_files
+from app.crud.collection_crud import add_file_to_default_collection
 
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
-# Настройка логгера
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-# Инициализация FastAPI
-app = FastAPI(
-    lifespan=lambda app: lifespan(app),
-    max_multipart_memory_size=1024 * 1024 * 100  # Лимит загрузки: 100 MB
-)
 
-# Подключение роутов авторизации
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
-
-# Настройка Jinja2-шаблонов и статики
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
-app.mount(
-    "/static",
-    StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")),
-    name="static"
-)
-
-# Жизненный цикл приложения: инициализация базы
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -51,113 +37,181 @@ async def lifespan(app: FastAPI):
         logger.exception(f"❌ Ошибка инициализации БД: {e}")
     yield
 
-# Главная страница: отображает форму и приветствие
-@app.get("/", response_class=HTMLResponse)
-async def get_root(request: Request, current_user: User = Depends(get_current_user_optional)):
-    logger.info(f"Запрос на /: query_params={request.query_params}")
-    # Проверка авторизации
+
+app = FastAPI(
+    lifespan=lifespan,
+    max_multipart_memory_size=1024 * 1024 * 100,
+    title="Document Processing API",
+    description="API для загрузки документов, управления коллекциями и анализа текста.",
+    version=VERSION,
+    docs_url="/docs",
+    openapi_url="/openapi.json"
+)
+
+app.include_router(html_router, prefix="/auth")
+app.include_router(api_router, prefix="/api")
+
+BASE_DIR = os.path.dirname(__file__)
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+
+def localtime(value):
+    if isinstance(value, datetime):
+        return (value + timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S')
+    return value
+
+
+templates.env.filters["localtime"] = localtime
+
+
+@app.get(
+    "/",
+    response_class=HTMLResponse,
+    summary="Главная страница",
+    description="Главная страница с возможностью загрузки файла, доступна только авторизованным пользователям",
+    tags=["Сервис"]
+)
+async def get_root(request: Request, current_user: User = Depends(get_current_user)):
     if not current_user:
-        return RedirectResponse(url="/auth/login", status_code=HTTPStatus.SEE_OTHER)
-    msg = request.cookies.get("msg")
-    if msg:
-        msg = unquote(msg)
+        return RedirectResponse("/auth/login", status_code=HTTPStatus.SEE_OTHER)
+
+    msg = unquote(request.cookies.get("msg")) if request.cookies.get("msg") else None
     response = templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"current_user": current_user, "msg": msg}
+        context={"request": request, "current_user": current_user, "msg": msg}
     )
     response.delete_cookie("msg")
     return response
 
-# Обработка загрузки файла: TF/IDF + сохранение
-@app.post("/uploadfile", response_class=RedirectResponse)
+
+@app.post("/uploadfile", response_class=RedirectResponse, summary="Добавление данных в базу", tags=["Статистика"])
 async def handle_upload(
-    file: UploadFile = File(),
-    current_user: User = Depends(get_current_user_optional)
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
-    # Проверка авторизации
     if not current_user:
-        return RedirectResponse(url="/auth/login", status_code=HTTPStatus.SEE_OTHER)
+        return RedirectResponse("/auth/login", status_code=HTTPStatus.SEE_OTHER)
 
-    text = await get_text(file)
-    tf = await term_frequency(text)
-    idf = await inverse_document_frequency(tf)
+    try:
+        text = await get_text(file)
+        tf = term_frequency(text)  # TF для всех слов
 
-    # Сохраняем файл и метрики
-    async with async_session() as session:
-        async with session.begin():
-            result = await session.execute(
-                insert(FileUpload).values(user_id=current_user.id, unique_words=len(tf))
+        # Сохраняем файл
+        file_upload = FileUpload(
+            user_id=current_user.id,
+            filename=file.filename,
+            content=text,
+            unique_words=len(tf)
+        )
+        db.add(file_upload)
+        await db.flush()  # Получим file_upload.id
+
+        # Считаем IDF для всех слов, которые есть в этом файле
+        words_all = list(tf.keys())
+        idf_map = await inverse_document_frequency(db, current_user, words_all)
+
+        # Выбираем 50 самых "редких" слов (по IDF — убывание редкости)
+        sorted_words = sorted(words_all, key=lambda word: (idf_map.get(word, 0.0), tf[word]))
+        selected_words = sorted_words[:50]
+
+        # Создаём объекты WordStat
+        word_stat = [
+            WordStat(
+                file_id=file_upload.id,
+                user_id=current_user.id,
+                word=word,
+                tf=tf[word],
+                idf=idf_map.get(word, 0.0)
             )
-            file_id = result.inserted_primary_key[0]
+            for word in selected_words
+        ]
+        db.add_all(word_stat)
 
-            session.add_all([
-                WordStat(file_id=file_id, word=word, tf=tf[word], idf=idf_val)
-                for word, idf_val in idf
-            ])
+        # Добавляем файл в дефолтную коллекцию
+        await add_file_to_default_collection(db, file_upload, current_user)
+
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Ошибка при загрузке файла: {e}")
+        return RedirectResponse("/?msg=Upload+failed", status_code=HTTPStatus.SEE_OTHER)
 
     return RedirectResponse(url="/output", status_code=HTTPStatus.SEE_OTHER)
 
-# Страница вывода TF/IDF по последней загрузке пользователя
-@app.get("/output", response_class=HTMLResponse)
-async def get_output(
-    request: Request,
-    current_user: User = Depends(get_current_user_optional)
-):
+@app.get(
+    "/output",
+    response_class=HTMLResponse,
+    summary="Таблица с результатами",
+    description="Вывод набора из 50 наиболее редко встречающихся в документе слов их частота (TF) и обратная частота документа (IDF)",
+    tags=["Статистика"]
+)
+async def get_output(request: Request, current_user: User = Depends(get_current_user)):
     if not current_user:
-        return RedirectResponse(url="/auth/login", status_code=HTTPStatus.SEE_OTHER)
+        return RedirectResponse("/auth/login", status_code=HTTPStatus.SEE_OTHER)
 
     async with async_session() as session:
         result = await session.execute(
-            select(WordStat)
+            WordStat.__table__.select()
             .join(FileUpload, WordStat.file_id == FileUpload.id)
             .where(FileUpload.user_id == current_user.id)
             .order_by(WordStat.id.desc())
             .limit(50)
         )
-        word_stats = result.scalars().all()
+        word_stat = result.fetchall()
 
-    tf = {ws.word: ws.tf for ws in word_stats}
-    words = [(ws.word, ws.idf) for ws in word_stats]
+    tf = {row.word: row.tf for row in word_stat}
+
+    words = [(row.word, row.idf) for row in word_stat]
+
 
     return templates.TemplateResponse(
         request=request,
         name="output.html",
-        context={"words": words, "tf": tf}
+        context={"words": words, "tf": tf, "current_user": current_user}
     )
 
-# Проверка доступности приложения
-@app.get("/status")
+@app.get(
+    "/myfiles",
+    summary="Файлы пользователя",
+    description="Отображение всех файлов, загруженных пользователем (id, filename, дата и время загрузки)",
+    tags=["Сервис"]
+)
+async def list_user_files(request: Request, current_user: User = Depends(get_current_user)):
+    if not current_user:
+        return RedirectResponse("/auth/login", status_code=HTTPStatus.SEE_OTHER)
+
+    async with async_session() as session:
+        files = await get_user_files(session, current_user.id)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="myfiles.html",
+        context={"request": request, "files": files, "current_user": current_user}
+    )
+
+
+@app.get(
+    "/version",
+    summary="Версия приложения",
+    description="Отображение версии приложения в JSON формате",
+    tags=["Сервис"]
+)
+async def version():
+    return JSONResponse(content={"version": VERSION})
+
+
+@app.get(
+    "/status",
+    summary="Статус приложения",
+    description="Отображение работоспособности приложения в JSON формате",
+    tags=["Сервис"]
+)
 async def status():
     return JSONResponse(content={"status": "OK"})
 
-# Метрики для пользователя: количество загрузок и уникальные слова
-@app.get("/metrics")
-async def metrics(current_user: User = Depends(get_current_user_optional)):
-    if not current_user:
-        return RedirectResponse(url="/auth/login", status_code=HTTPStatus.SEE_OTHER)
-
-    async with async_session() as session:
-        total_uploads = await session.scalar(
-            select(func.count()).select_from(FileUpload).where(FileUpload.user_id == current_user.id)
-        )
-        last_upload = await session.scalar(
-            select(FileUpload)
-            .where(FileUpload.user_id == current_user.id)
-            .order_by(FileUpload.id.desc())
-            .limit(1)
-        )
-        unique_words = last_upload.unique_words if last_upload else 0
-
-    return JSONResponse(content={
-        "total_uploads": total_uploads,
-        "unique_words": unique_words
-    })
-
-# Версия приложения
-@app.get("/version")
-async def version():
-    return JSONResponse(content={"version": VERSION})
 
 @app.exception_handler(404)
 async def not_found_404(request: Request, exc):

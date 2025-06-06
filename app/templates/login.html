@@ -1,17 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Вход</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block navbar_title %}Вход{% endblock %}
 
-<div class="navbar">
-    <div>Вход</div>
-    <div><a href="/">На главную</a></div>
-</div>
-
+{% block content %}
 <div class="form-container">
     <h2>Вход</h2>
 
@@ -33,6 +24,4 @@
         Ещё нет аккаунта? <a href="/auth/register">Регистрация</a>
     </p>
 </div>
-
-</body>
-</html>
+{% endblock %}

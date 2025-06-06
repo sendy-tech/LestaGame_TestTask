@@ -1,24 +1,40 @@
-from typing import Optional
+from fastapi import Request, HTTPException, Depends
+from jose import jwt, JWTError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import Request
-from app.auth.auth_services import decode_token
-from app.database import async_session
-from sqlalchemy import select
-from app.auth.auth_models import User
+from app.auth.auth_services import SECRET_KEY, ALGORITHM
+from app.database import get_db
+from app.models.user import User
 
-async def get_current_user_optional(request: Request) -> Optional[User]:
-    token = request.cookies.get("access_token")
+async def get_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    token = None
+
+    # 1. Попытка из заголовка Authorization
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+
+    # 2. Попытка из cookie
     if not token:
-        return None
+        token = request.cookies.get("access_token")
+    print(f"[DEBUG] Access token received: {token}")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Пользователь не авторизован")
 
     try:
-        payload = decode_token(token)
-        user_id: int = int(payload.get("sub"))  # 👈 исправлено
-        if user_id is None:
-            return None
-    except Exception:
-        return None
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Недопустимый токен")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Неверный токен")
 
-    async with async_session() as session:
-        result = await session.execute(select(User).where(User.id == user_id))
-        return result.scalar_one_or_none()
+    try:
+        user = await db.get(User, int(user_id))
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+    return user

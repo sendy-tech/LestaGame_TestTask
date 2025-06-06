@@ -1,17 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Регистрация</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Регистрация{% endblock %}
+{% block navbar_title %}Регистрация{% endblock %}
 
-<div class="navbar">
-    <div>Регистрация</div>
-    <div><a href="/">На главную</a></div>
-</div>
-
+{% block content %}
 <div class="form-container">
     <h2>Регистрация</h2>
 
@@ -62,5 +53,4 @@
     });
 </script>
 
-</body>
-</html>
+{% endblock %}

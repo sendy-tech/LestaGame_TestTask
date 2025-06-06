@@ -1,20 +1,12 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Страница не найдена</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
+{% extends "base.html" %}
 
-<div class="navbar">
-    <div>Ошибка 404</div>
-</div>
+{% block title %}Страница не найдена{% endblock %}
 
+{% block navbar_title %}Ошибка 404{% endblock %}
+
+{% block content %}
 <div class="not-found-container">
     <img src="/static/404img.png" alt="404" class="not-found-image">
     <a href="/"><button>На главную</button></a>
 </div>
-
-</body>
-</html>
+{% endblock %}

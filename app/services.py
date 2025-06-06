@@ -1,33 +1,46 @@
 import math
-import random
 import re
 from collections import Counter
 from http import HTTPStatus
-from typing import Any
 
 from fastapi import UploadFile, HTTPException
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# Читает содержимое файла и возвращает текст как строку.
-# Если файл не удаётся прочитать, вызывает HTTP 400.
+from app.models import FileUpload, WordStat
+from app.models.user import User
+
+
+def decode_content(content: bytes) -> str:
+    for encoding in ["utf-8", "windows-1251", "cp1252"]:
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return content.decode("utf-8", errors="ignore")  # fallback
+
+
 async def get_text(file: UploadFile) -> str:
+    """Читает содержимое файла как текст."""
     try:
         content = await file.read()
-        # Декодируем содержимое, игнорируя ошибки кодировки
-        text = content.decode("utf-8", errors="ignore")
+        text = decode_content(content)
     except Exception:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail="Не удалось прочитать файл"
-        )
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail="Не удалось прочитать файл")
     finally:
         await file.close()
 
     return text
 
-# Расчёт Term Frequency (TF)
-async def term_frequency(text: str) -> Counter:
-    # Извлекаем только слова без цифр и знаков препинания
-    words = re.findall(r'\b[^\d\W]+\b', text)
+
+def clean_words(text: str) -> list[str]:
+    """Извлекает слова на любом алфавите (русский, английский и др.)."""
+    return re.findall(r'\b[^\W\d_]{2,}\b', text.lower(), flags=re.UNICODE)
+
+
+def term_frequency(text: str) -> Counter[str]:
+    """Вычисляет Term Frequency (TF) для текста."""
+    words = clean_words(text)
 
     if not words:
         raise HTTPException(
@@ -36,26 +49,45 @@ async def term_frequency(text: str) -> Counter:
         )
 
     word_counts = Counter(words)
-    total_words = word_counts.total()
+    total_words = sum(word_counts.values())
 
-    # Нормализуем частоты
-    for word in word_counts:
-        word_counts[word] /= total_words
+    # Возвращаем нормализованную частоту
+    return Counter({word: count / total_words for word, count in word_counts.items()})
 
-    return word_counts
+async def inverse_document_frequency(db: AsyncSession, user: User, words: list[str]) -> dict[str, float]:
+    """
+    Вычисляет IDF для списка слов по документам конкретного пользователя.
 
-# Вычисляет Inverse Document Frequency (IDF) (обратную частоту документа) для каждого слова.
-# Использует случайные данные для количества документов, содержащих слово.
-# Возвращает список из 50 слов с наибольшим IDF.
-async def inverse_document_frequency(words: Counter) -> list[tuple[Any, float]]:
+    :param db: AsyncSession SQLAlchemy
+    :param user: текущий пользователь (должен иметь атрибут id)
+    :param words: список слов для подсчёта IDF
+    :return: словарь {слово: idf}
+    """
+    # Получаем количество документов текущего пользователя
+    total_docs_res = await db.execute(
+        select(func.count(FileUpload.id)).where(FileUpload.user_id == user.id)
+    )
+    total_docs = total_docs_res.scalar_one()
+
+    if total_docs == 0:
+        return {word: 0.0 for word in words}
+
+    # Считаем, в скольких документах пользователя встречается каждое слово
+    result = await db.execute(
+        select(
+            WordStat.word,
+            func.count(func.distinct(WordStat.file_id)).label("doc_count")
+        ).where(
+            WordStat.word.in_(words),
+            WordStat.user_id == user.id
+        ).group_by(WordStat.word)
+    )
+
+    word_doc_counts = {row.word: row.doc_count for row in result}
+
+    # IDF по формуле log10(N / (1 + n_i)), где N — общее число документов пользователя
     idf_scores = {}
-    total_docs = 100_000_000  # Допустимая база документов
-
     for word in words:
-        docs_with_word = random.randint(1, 3000)
-        idf = math.log10(total_docs / docs_with_word)
-        idf_scores[word] = idf
-
-    # Сортируем по убыванию IDF и берём топ-50
-    top_words = sorted(idf_scores.items(), key=lambda item: item[1], reverse=True)
-    return top_words[:50]
+        doc_count = word_doc_counts.get(word, 0)
+        idf_scores[word] = math.log10(total_docs / (1 + doc_count))
+    return idf_scores

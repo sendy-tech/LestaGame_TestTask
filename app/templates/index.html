@@ -1,30 +1,10 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Главная</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
+{% extends "base.html" %}
 
-<div class="navbar">
-    <div>Загрузка файла</div>
-    <div>
-        {% if current_user %}
-            <span>Привет, {{ current_user.username }}!</span>
-            <a href="/auth/account">Настройки аккаунта</a>
-            <a href="/auth/logout">Выйти</a>
-        {% else %}
-            <a href="/auth/login">Войти</a>
-            <a href="/auth/register">Регистрация</a>
-        {% endif %}
-    </div>
-</div>
+{% block title %}Главная{% endblock %}
 
-{% if msg %}
-    <div class="flash">{{ msg }}</div>
-{% endif %}
+{% block navbar_title %}Загрузка файла{% endblock %}
 
+{% block content %}
 {% if current_user %}
     <form action="/uploadfile" method="post" enctype="multipart/form-data" class="form-centered">
         <label for="file">Выберите текстовый файл (.txt):</label>
@@ -32,6 +12,4 @@
         <button type="submit">Загрузить</button>
     </form>
 {% endif %}
-
-</body>
-</html>
+{% endblock %}

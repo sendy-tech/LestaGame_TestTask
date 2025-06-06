@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Мои загруженные файлы</h2>
+{% if files %}
+    <ul>
+    {% for file in files %}
+        <li>ID: {{ file.id }}, Уникальных слов: {{ file.unique_words }}, Загружено: {{ file.created_at|localtime }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>Нет загруженных файлов.</p>
+{% endif %}
+{% endblock %}
