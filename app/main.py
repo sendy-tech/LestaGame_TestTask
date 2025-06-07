@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session, engine, Base, get_db
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.models.document import FileUpload, WordStat
 from app.routes.html_routes import router as html_router
@@ -64,7 +64,6 @@ def localtime(value):
 
 templates.env.filters["localtime"] = localtime
 
-
 @app.get(
     "/",
     response_class=HTMLResponse,
@@ -72,8 +71,8 @@ templates.env.filters["localtime"] = localtime
     description="Главная страница с возможностью загрузки файла, доступна только авторизованным пользователям",
     tags=["Сервис"]
 )
-async def get_root(request: Request, current_user: User = Depends(get_current_user)):
-    if not current_user:
+async def get_root(request: Request, current_user: User | None = Depends(get_current_user_optional)):
+    if current_user is None:
         return RedirectResponse("/auth/login", status_code=HTTPStatus.SEE_OTHER)
 
     msg = unquote(request.cookies.get("msg")) if request.cookies.get("msg") else None
