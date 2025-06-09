@@ -9,11 +9,11 @@
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 477)">
 <title>%3</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-477 349,-477 349,4 -4,4"/>
-<!-- users -->
+<!-- Пользователь -->
 <g id="node1" class="node">
-<title>users</title>
+<title>Пользователь</title>
 <polygon fill="none" stroke="black" points="111.5,-0.5 111.5,-92.5 254.5,-92.5 254.5,-0.5 111.5,-0.5"/>
-<text text-anchor="middle" x="183" y="-77.3" font-family="Times,serif" font-size="14.00">users</text>
+<text text-anchor="middle" x="183" y="-77.3" font-family="Times,serif" font-size="14.00">Пользователь</text>
 <polyline fill="none" stroke="black" points="111.5,-69.5 254.5,-69.5 "/>
 <text text-anchor="middle" x="183" y="-54.3" font-family="Times,serif" font-size="14.00">id (PK)</text>
 <polyline fill="none" stroke="black" points="111.5,-46.5 254.5,-46.5 "/>
@@ -21,11 +21,11 @@
 <polyline fill="none" stroke="black" points="111.5,-23.5 254.5,-23.5 "/>
 <text text-anchor="middle" x="183" y="-8.3" font-family="Times,serif" font-size="14.00">hashed_password</text>
 </g>
-<!-- collections -->
+<!-- Коллекция -->
 <g id="node2" class="node">
-<title>collections</title>
+<title>Коллекция</title>
 <polygon fill="none" stroke="black" points="0,-144.5 0,-259.5 104,-259.5 104,-144.5 0,-144.5"/>
-<text text-anchor="middle" x="52" y="-244.3" font-family="Times,serif" font-size="14.00">collections</text>
+<text text-anchor="middle" x="52" y="-244.3" font-family="Times,serif" font-size="14.00">Коллекция</text>
 <polyline fill="none" stroke="black" points="0,-236.5 104,-236.5 "/>
 <text text-anchor="middle" x="52" y="-221.3" font-family="Times,serif" font-size="14.00">id (PK)</text>
 <polyline fill="none" stroke="black" points="0,-213.5 104,-213.5 "/>
@@ -35,18 +35,18 @@
 <polyline fill="none" stroke="black" points="0,-167.5 104,-167.5 "/>
 <text text-anchor="middle" x="52" y="-152.3" font-family="Times,serif" font-size="14.00">user_id (FK)</text>
 </g>
-<!-- collections&#45;&gt;users -->
+<!-- Коллекция&#45;&gt;Пользователь -->
 <g id="edge1" class="edge">
-<title>collections&#45;&gt;users</title>
+<title>Коллекция&#45;&gt;Пользователь</title>
 <path fill="none" stroke="black" d="M100.41,-144.28C112.58,-130.01 125.61,-114.75 137.63,-100.66"/>
 <polygon fill="black" stroke="black" points="140.36,-102.85 144.19,-92.97 135.04,-98.31 140.36,-102.85"/>
 <text text-anchor="middle" x="152" y="-114.8" font-family="Times,serif" font-size="14.00">user_id</text>
 </g>
-<!-- fileuploads -->
+<!-- Документ -->
 <g id="node3" class="node">
-<title>fileuploads</title>
+<title>Документ</title>
 <polygon fill="none" stroke="black" points="164,-156 164,-248 258,-248 258,-156 164,-156"/>
-<text text-anchor="middle" x="211" y="-232.8" font-family="Times,serif" font-size="14.00">fileuploads</text>
+<text text-anchor="middle" x="211" y="-232.8" font-family="Times,serif" font-size="14.00">Документ</text>
 <polyline fill="none" stroke="black" points="164,-225 258,-225 "/>
 <text text-anchor="middle" x="211" y="-209.8" font-family="Times,serif" font-size="14.00">id (PK)</text>
 <polyline fill="none" stroke="black" points="164,-202 258,-202 "/>
@@ -54,11 +54,11 @@
 <polyline fill="none" stroke="black" points="164,-179 258,-179 "/>
 <text text-anchor="middle" x="211" y="-163.8" font-family="Times,serif" font-size="14.00">content</text>
 </g>
-<!-- collection_documents -->
+<!-- Коллекция_Документ -->
 <g id="node4" class="node">
-<title>collection_documents</title>
+<title>Коллекция_Документ</title>
 <polygon fill="none" stroke="black" points="11,-346 11,-438 181,-438 181,-346 11,-346"/>
-<text text-anchor="middle" x="96" y="-422.8" font-family="Times,serif" font-size="14.00">collection_documents</text>
+<text text-anchor="middle" x="96" y="-422.8" font-family="Times,serif" font-size="14.00">Коллекция_Документ</text>
 <polyline fill="none" stroke="black" points="11,-415 181,-415 "/>
 <text text-anchor="middle" x="96" y="-399.8" font-family="Times,serif" font-size="14.00">id (PK)</text>
 <polyline fill="none" stroke="black" points="11,-392 181,-392 "/>
@@ -66,25 +66,25 @@
 <polyline fill="none" stroke="black" points="11,-369 181,-369 "/>
 <text text-anchor="middle" x="96" y="-353.8" font-family="Times,serif" font-size="14.00">document_id (FK)</text>
 </g>
-<!-- collection_documents&#45;&gt;collections -->
+<!-- Коллекция_Документ&#45;&gt;Коллекция -->
 <g id="edge2" class="edge">
-<title>collection_documents&#45;&gt;collections</title>
+<title>Коллекция_Документ&#45;&gt;Коллекция</title>
 <path fill="none" stroke="black" d="M58.77,-345.92C47.96,-330.15 37.56,-311.7 32,-293 29.81,-285.64 29.14,-277.88 29.5,-270.12"/>
 <polygon fill="black" stroke="black" points="33.01,-270.27 30.53,-259.97 26.04,-269.56 33.01,-270.27"/>
 <text text-anchor="middle" x="76.5" y="-281.8" font-family="Times,serif" font-size="14.00">collection_id</text>
 </g>
-<!-- collection_documents&#45;&gt;fileuploads -->
+<!-- Коллекция_Документ&#45;&gt;Документ -->
 <g id="edge3" class="edge">
-<title>collection_documents&#45;&gt;fileuploads</title>
+<title>Коллекция_Документ&#45;&gt;Документ</title>
 <path fill="none" stroke="black" d="M112.32,-345.98C120.95,-324.62 132.55,-299.19 146,-278 150.64,-270.68 155.97,-263.34 161.54,-256.27"/>
 <polygon fill="black" stroke="black" points="164.57,-258.09 168.15,-248.11 159.14,-253.68 164.57,-258.09"/>
 <text text-anchor="middle" x="191.5" y="-281.8" font-family="Times,serif" font-size="14.00">document_id</text>
 </g>
-<!-- word_stat -->
+<!-- Статистика -->
 <g id="node5" class="node">
-<title>word_stat</title>
+<title>Статистика</title>
 <polygon fill="none" stroke="black" points="234,-311.5 234,-472.5 338,-472.5 338,-311.5 234,-311.5"/>
-<text text-anchor="middle" x="286" y="-457.3" font-family="Times,serif" font-size="14.00">word_stat</text>
+<text text-anchor="middle" x="286" y="-457.3" font-family="Times,serif" font-size="14.00">Статистика</text>
 <polyline fill="none" stroke="black" points="234,-449.5 338,-449.5 "/>
 <text text-anchor="middle" x="286" y="-434.3" font-family="Times,serif" font-size="14.00">id (PK)</text>
 <polyline fill="none" stroke="black" points="234,-426.5 338,-426.5 "/>
@@ -98,16 +98,16 @@
 <polyline fill="none" stroke="black" points="234,-334.5 338,-334.5 "/>
 <text text-anchor="middle" x="286" y="-319.3" font-family="Times,serif" font-size="14.00">idf</text>
 </g>
-<!-- word_stat&#45;&gt;users -->
+<!-- Статистика&#45;&gt;Пользователь -->
 <g id="edge5" class="edge">
-<title>word_stat&#45;&gt;users</title>
+<title>Статистика&#45;&gt;Пользователь</title>
 <path fill="none" stroke="black" d="M294.39,-311.47C296.29,-261.04 292.27,-195.79 267,-144 259.51,-128.65 248.94,-113.81 237.81,-100.56"/>
 <polygon fill="black" stroke="black" points="240.41,-98.22 231.22,-92.96 235.12,-102.81 240.41,-98.22"/>
 <text text-anchor="middle" x="319" y="-198.3" font-family="Times,serif" font-size="14.00">user_id</text>
 </g>
-<!-- word_stat&#45;&gt;fileuploads -->
+<!-- Статистика&#45;&gt;Документ -->
 <g id="edge4" class="edge">
-<title>word_stat&#45;&gt;fileuploads</title>
+<title>Статистика&#45;&gt;Документ</title>
 <path fill="none" stroke="black" d="M254.19,-311.27C246.98,-293.2 239.49,-274.41 232.8,-257.65"/>
 <polygon fill="black" stroke="black" points="235.93,-256.04 228.97,-248.05 229.42,-258.63 235.93,-256.04"/>
 <text text-anchor="middle" x="267.5" y="-281.8" font-family="Times,serif" font-size="14.00">file_id</text>
