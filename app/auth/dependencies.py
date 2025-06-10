@@ -6,22 +6,16 @@ from app.auth.auth_services import SECRET_KEY, ALGORITHM
 from app.database import get_db
 from app.models.user import User
 
+
 async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    token = None
-
-    # 1. Попытка из заголовка Authorization
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-
-    # 2. Попытка из cookie
-    if not token:
-        token = request.cookies.get("access_token")
-    print(f"[DEBUG] Access token received: {token}")
-
+    """
+    Получить текущего авторизованного пользователя.
+    Выбрасывает исключение 401, если токен отсутствует или некорректен.
+    """
+    token = extract_token_from_request(request)
     if not token:
         raise HTTPException(status_code=401, detail="Пользователь не авторизован")
 
@@ -30,32 +24,23 @@ async def get_current_user(
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Недопустимый токен")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Неверный токен")
-
-    try:
         user = await db.get(User, int(user_id))
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Пользователь не найден")
-    return user
+        if not user:
+            raise HTTPException(status_code=401, detail="Пользователь не найден")
+        return user
+    except (JWTError, ValueError):
+        raise HTTPException(status_code=401, detail="Неверный токен")
 
 
 async def get_current_user_optional(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ) -> User | None:
-    token = None
-
-    # 1. Authorization header
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-
-    # 2. Cookie fallback
-    if not token:
-        token = request.cookies.get("access_token")
-    print(f"[DEBUG] (Optional) Access token received: {token}")
-
+    """
+    Получает пользователя, если токен передан и валиден.
+    Возвращает None, если токена нет или он некорректен.
+    """
+    token = extract_token_from_request(request)
     if not token:
         return None
 
@@ -64,11 +49,17 @@ async def get_current_user_optional(
         user_id = payload.get("sub")
         if not user_id:
             return None
-    except JWTError:
-        return None
-
-    try:
-        user = await db.get(User, int(user_id))
-        return user
+        return await db.get(User, int(user_id))
     except Exception:
         return None
+
+
+def extract_token_from_request(request: Request) -> str | None:
+    """
+    Извлекает токен из заголовка Authorization или из cookie.
+    """
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split(" ")[1]
+
+    return request.cookies.get("access_token")

@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from typing import List
 
 class CollectionDocument(Base):
+    """
+    Промежуточная таблица для связи многие-ко-многим между коллекциями и документами.
+    """
     __tablename__ = "collection_documents"
 
     id = Column(Integer, primary_key=True)
@@ -16,6 +19,12 @@ class CollectionDocument(Base):
 
 
 class Collection(Base):
+    """
+    Коллекция документов, принадлежащая пользователю.
+    - name: имя коллекции
+    - description: необязательное описание
+    - user_id: внешний ключ пользователя
+    """
     __tablename__ = "collections"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -35,5 +44,9 @@ class Collection(Base):
     def __repr__(self):
         return f"<Collection(id={self.id}, name={self.name})>"
 
+
 class CollectionsAddRequest(BaseModel):
+    """
+    Pydantic-модель для запроса добавления документа в несколько коллекций.
+    """
     collection_ids: List[int]

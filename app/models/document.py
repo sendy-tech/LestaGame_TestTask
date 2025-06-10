@@ -5,10 +5,11 @@ from app.database import Base
 
 class FileUpload(Base):
     """
-    Представляет загруженный файл с метаданными:
-    - user_id: пользователь-владелец
-    - created_at: дата и время загрузки
+    Модель загруженного файла:
+    - user_id: владелец файла
     - unique_words: количество уникальных слов
+    - content: текстовое содержимое файла
+    - created_at: время загрузки
     """
     __tablename__ = "fileuploads"
 
@@ -34,12 +35,9 @@ class FileUpload(Base):
 
 class WordStat(Base):
     """
-    Представляет статистику слова в загруженном документе:
-    - file_id: внешний ключ к файлу
-    - user_id: пользователь, загрузивший файл
-    - word: слово
-    - tf: term frequency
-    - idf: inverse document frequency
+    Модель статистики по словам в файле:
+    - tf: частота термина (term frequency)
+    - idf: обратная частота документа (inverse document frequency)
     """
     __tablename__ = "word_stat"
 
@@ -53,7 +51,11 @@ class WordStat(Base):
     file = relationship("FileUpload", back_populates="word_stat")
     user = relationship("User", back_populates="word_stat")
 
+
 class FileUploadShort(BaseModel):
+    """
+    Короткое представление документа — используется в списках.
+    """
     id: int
     filename: str
 

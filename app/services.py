@@ -9,7 +9,7 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import FileUpload, WordStat
+from app.models.document import FileUpload, WordStat
 from app.models.user import User
 
 

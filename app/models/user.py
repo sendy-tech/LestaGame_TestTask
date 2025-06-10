@@ -1,11 +1,14 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-
 from app.database import Base
 from pydantic import BaseModel
 
-# SQLAlchemy модель пользователя
 class User(Base):
+    """
+    Модель пользователя:
+    - username: уникальное имя пользователя
+    - hashed_password: пароль в зашифрованном виде
+    """
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -20,7 +23,9 @@ class User(Base):
         return f"<User(id={self.id}, username={self.username})>"
 
 
-# Pydantic-схема для создания пользователя (регистрация)
 class UserCreate(BaseModel):
+    """
+    Pydantic-схема для регистрации нового пользователя.
+    """
     username: str
     password: str

@@ -1,10 +1,11 @@
-from http import HTTPStatus
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 from starlette.responses import JSONResponse
 
 from app.auth.auth_services import authenticate_user, create_access_token
@@ -14,12 +15,10 @@ from app.database import get_db, async_session
 from app.models.collection import CollectionsAddRequest
 from app.models.user import User, UserCreate
 from app.models.document import FileUpload, FileUploadShort
-from app.schemas import (WordStatRead, CollectionWithDocumentIDs)
-from app.services import inverse_document_frequency
-from app.services import huffman_encode
+from app.schemas import WordStatRead, CollectionWithDocumentIDs
+from app.services import inverse_document_frequency, huffman_encode
 
 router = APIRouter()
-
 
 # === DOCUMENTS ===
 
@@ -34,17 +33,12 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    if user is None:
-        raise HTTPException(status_code=401, detail="Пользователь не авторизован")
-
+    # Получаем список документов текущего пользователя
     try:
         return await document_crud.get_user_files(db, user.id)
-    except Exception as e:
-        import logging
-        logging.exception("Ошибка при получении документов")
+    except Exception:
+        logging.exception(user.id," Ошибка при получении документов")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
-
-
 
 @router.get(
     "/documents/{document_id}",
@@ -53,13 +47,11 @@ async def list_documents(
     tags=["Документ"]
 )
 async def get_document(document_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    # Проверяем, что документ принадлежит текущему пользователю
     file = await db.get(FileUpload, document_id)
     if not file or file.user_id != user.id:
         raise HTTPException(status_code=404, detail="Документ не найден")
-    return {
-        "content": file.content
-    }
-
+    return {"content": file.content}
 
 @router.get(
     "/documents/{document_id}/statistics",
@@ -68,12 +60,12 @@ async def get_document(document_id: int, db: AsyncSession = Depends(get_db), use
     description="Получает TF/IDF статистику по конкретному документу",
     tags=["Документ"]
 )
-async def get_document_stat(document_id: int, db: AsyncSession = Depends(get_db),
-                             user: User = Depends(get_current_user)):
+async def get_document_stat(document_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     file = await db.get(FileUpload, document_id)
     if not file or file.user_id != user.id:
         raise HTTPException(status_code=404, detail="Документ не найден")
     return await document_crud.get_word_stat_for_file(db, document_id)
+
 
 @router.get(
     "/documents/{document_id}/huffman",
@@ -81,27 +73,20 @@ async def get_document_stat(document_id: int, db: AsyncSession = Depends(get_db)
     description="Возвращает содержимое документа, закодированное с помощью алгоритма Хаффмана",
     tags=["Документ"]
 )
-async def get_document_huffman(
-    document_id: int,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
-):
+async def get_document_huffman(document_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     file = await db.get(FileUpload, document_id)
     if not file or file.user_id != user.id:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
-    content = file.content
-    if not content:
+    if not file.content:
         raise HTTPException(status_code=400, detail="Документ пустой")
 
-    encoded_text, huffman_tree = huffman_encode(content)
+    encoded_text, huffman_tree = huffman_encode(file.content)
 
     return {
         "encoded": encoded_text,
-        "tree": huffman_tree  # для справки/отладки
+        "tree": huffman_tree  # для отладки
     }
-
-
 
 @router.delete(
     "/documents/{document_id}",
@@ -110,12 +95,13 @@ async def get_document_huffman(
     tags=["Документ"]
 )
 async def delete_document(document_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    # Удаляем файл и его статистику, если есть
     file = await document_crud.delete_file_upload(db, document_id, user.id)
     if not file:
         raise HTTPException(status_code=404, detail="Документ не найден")
-    await document_crud.delete_word_stat_for_file(db, document_id)
-    return {"detail": "Документ и статистика удалены"}
-
+    else:
+        await document_crud.delete_word_stat_for_file(db, document_id)
+        return {"detail": "Документ и статистика удалены"}
 
 # === COLLECTIONS ===
 
@@ -127,11 +113,7 @@ async def delete_document(document_id: int, db: AsyncSession = Depends(get_db), 
     tags=["Коллекция"]
 )
 async def list_collections(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    if user is None:
-        raise HTTPException(status_code=401, detail="Пользователь не авторизован")
     return await collection_crud.get_user_collections_with_ids(db, user)
-
-
 
 @router.get(
     "/collections/{collection_id}",
@@ -139,13 +121,11 @@ async def list_collections(db: AsyncSession = Depends(get_db), user: User = Depe
     description="Получить список ID документов, входящих в конкретную коллекцию",
     tags=["Коллекция"]
 )
-async def get_collection_documents(collection_id: int, db: AsyncSession = Depends(get_db),
-                                   user: User = Depends(get_current_user)):
+async def get_collection_documents(collection_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     collection = await collection_crud.get_collection_by_id(db, collection_id, user)
     if not collection:
         raise HTTPException(status_code=404, detail="Коллекция не найдена")
     return [file.id for file in collection.files]
-
 
 @router.get(
     "/collections/{collection_id}/statistics",
@@ -159,19 +139,15 @@ async def get_collection_statistics(collection_id: int, db: AsyncSession = Depen
 
     idf_map = await inverse_document_frequency(db, user, words)
 
-    print(f"IDF Map: {idf_map}")###############
-
-    merged_stat = []
-    for s in stats:
-        idf = idf_map.get(s["word"], 0.0)
-        merged_stat.append({
+    merged_stat = [
+        {
             "word": s["word"],
             "tf": round(s["tf"], 6),
-            "idf": round(idf, 6)
-        })
-
+            "idf": round(idf_map.get(s["word"], 0.0), 6)
+        }
+        for s in stats
+    ]
     return sorted(merged_stat, key=lambda x: x["idf"], reverse=True)
-
 
 @router.post(
     "/collection/add_document_to_collections/{document_id}",
@@ -180,23 +156,22 @@ async def get_collection_statistics(collection_id: int, db: AsyncSession = Depen
     tags=["Коллекция"]
 )
 async def add_document_to_collections(
-    document_id: int,
-    request: CollectionsAddRequest,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user)
-):
+        document_id: int,
+        request: CollectionsAddRequest,
+        db: AsyncSession = Depends(get_db),
+        user: User = Depends(get_current_user)):
     added_collections = []
     for collection_id in request.collection_ids:
-        result = await collection_crud.add_file_to_collection(db, collection_id, document_id, user)
-        if result:
+        if await collection_crud.add_file_to_collection(db, collection_id, document_id, user):
             added_collections.append(collection_id)
+
     if not added_collections:
         raise HTTPException(status_code=404, detail="Коллекции или документ не найдены или нет доступа")
+
     return {
         "detail": f"Документ добавлен в {len(added_collections)} коллекций",
         "collections_added": added_collections
     }
-
 
 @router.delete(
     "/collection/{collection_id}/{document_id}",
@@ -204,13 +179,10 @@ async def add_document_to_collections(
     description="Удаляет документ из указанной коллекции",
     tags=["Коллекция"]
 )
-async def remove_document_from_collection(collection_id: int, document_id: int, db: AsyncSession = Depends(get_db),
-                                          user: User = Depends(get_current_user)):
-    result = await collection_crud.remove_file_from_collection(db, collection_id, document_id, user)
-    if not result:
+async def remove_document_from_collection(collection_id: int, document_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    if not await collection_crud.remove_file_from_collection(db, collection_id, document_id, user):
         raise HTTPException(status_code=404, detail="Коллекция или документ не найдены")
     return {"detail": "Документ удалён из коллекции"}
-
 
 # === USERS ===
 
@@ -220,31 +192,23 @@ async def remove_document_from_collection(collection_id: int, document_id: int, 
     description="Получить токен авторизации и установить его в cookie",
     tags=["Пользователь"]
 )
-async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db)
-):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     user = await authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Неверное имя пользователя или пароль")
 
     access_token = create_access_token(data={"sub": str(user.id)})
 
-    # Создаём ответ
     response = JSONResponse(content={"access_token": access_token, "token_type": "bearer"})
-
-    # Устанавливаем токен в cookie
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,       # Защита от доступа через JS
-        secure=False,        # True в проде с HTTPS
-        samesite="lax",      # Или "strict", если нужно
-        max_age=60 * 60 * 24 # 24 часа
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=60 * 60 * 24
     )
-
     return response
-
 
 @router.post(
     "/register",
@@ -253,12 +217,10 @@ async def login(
     tags=["Пользователь"]
 )
 async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
-    existing_user = await user_crud.get_user_by_username(db, data.username)
-    if existing_user:
+    if await user_crud.get_user_by_username(db, data.username):
         raise HTTPException(status_code=400, detail="Пользователь с таким именем уже существует")
     await user_crud.create_user(db, username=data.username, password=data.password)
     return {"detail": "Пользователь зарегистрирован"}
-
 
 @router.get(
     "/logout",
@@ -271,20 +233,17 @@ async def logout_user(request: Request):
     response.delete_cookie("access_token", path="/")
     return response
 
-
 @router.patch(
     "/user/{user_id}",
     summary="Изменить пароль",
     description="Позволяет пользователю изменить свой пароль",
     tags=["Пользователь"]
 )
-async def change_password(user_id: int, new_password: str, db: AsyncSession = Depends(get_db),
-                          current_user: User = Depends(get_current_user)):
+async def change_password(user_id: int, new_password: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     if user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Недостаточно прав")
     await user_crud.update_password(db, user_id, new_password)
     return {"detail": "Пароль обновлён"}
-
 
 @router.delete(
     "/user/{user_id}",
@@ -296,25 +255,17 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_
     if user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Недостаточно прав")
     await user_crud.delete_user(db, user_id)
-    response = RedirectResponse("/", status_code=302)
+    response = RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie("Authorization")
     return response
 
-
 # === METRICS ===
 
-@router.get(
-    "/metrics",
-    summary="Метрики API",
-    description="Простейшие диагностические метрики: количество пользователей, документов и коллекций в JSON формате",
-    tags=["Сервис"]
-)
-async def get_metrics(current_user: User = Depends(get_current_user)
-                      ,db: AsyncSession = Depends(get_db)):
-    if not current_user:
-        return RedirectResponse("/auth/login", status_code=HTTPStatus.SEE_OTHER)
+@router.get("/metrics", include_in_schema=False)
+async def get_metrics(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     document_count = await document_crud.count_documents(db)
     collection_count = await collection_crud.count_collections(db)
+
     async with async_session() as session:
         total_uploads = await session.scalar(
             select(func.count()).select_from(FileUpload).where(FileUpload.user_id == current_user.id)
@@ -335,3 +286,4 @@ async def get_metrics(current_user: User = Depends(get_current_user)
         "documents": document_count,
         "collections": collection_count
     })
+
