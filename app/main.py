@@ -21,7 +21,7 @@ from app.services import get_text, term_frequency, inverse_document_frequency
 from app.crud.document_crud import get_user_files
 from app.crud.collection_crud import add_file_to_default_collection
 
-VERSION = "0.0.2"
+VERSION = "0.0.3"
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
