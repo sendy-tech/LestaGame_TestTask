@@ -8,16 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from app.auth.auth_services import authenticate_user, create_access_token
-from app.database import get_db, async_session
 from app.auth.dependencies import get_current_user
+from app.crud import document_crud, collection_crud, user_crud
+from app.database import get_db, async_session
 from app.models.collection import CollectionsAddRequest
 from app.models.user import User, UserCreate
 from app.models.document import FileUpload, FileUploadShort
-from app.schemas import (
-    WordStatRead, CollectionWithDocumentIDs
-)
-from app.crud import document_crud, collection_crud, user_crud
+from app.schemas import (WordStatRead, CollectionWithDocumentIDs)
 from app.services import inverse_document_frequency
+from app.services import huffman_encode
 
 router = APIRouter()
 
@@ -75,6 +74,33 @@ async def get_document_stat(document_id: int, db: AsyncSession = Depends(get_db)
     if not file or file.user_id != user.id:
         raise HTTPException(status_code=404, detail="Документ не найден")
     return await document_crud.get_word_stat_for_file(db, document_id)
+
+@router.get(
+    "/documents/{document_id}/huffman",
+    summary="Код Хаффмана по документу",
+    description="Возвращает содержимое документа, закодированное с помощью алгоритма Хаффмана",
+    tags=["Документ"]
+)
+async def get_document_huffman(
+    document_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    file = await db.get(FileUpload, document_id)
+    if not file or file.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Документ не найден")
+
+    content = file.content
+    if not content:
+        raise HTTPException(status_code=400, detail="Документ пустой")
+
+    encoded_text, huffman_tree = huffman_encode(content)
+
+    return {
+        "encoded": encoded_text,
+        "tree": huffman_tree  # для справки/отладки
+    }
+
 
 
 @router.delete(

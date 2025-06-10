@@ -1,5 +1,7 @@
 import math
 import re
+import heapq
+from typing import Optional
 from collections import Counter
 from http import HTTPStatus
 
@@ -91,3 +93,53 @@ async def inverse_document_frequency(db: AsyncSession, user: User, words: list[s
         doc_count = word_doc_counts.get(word, 0)
         idf_scores[word] = math.log10(total_docs / (1 + doc_count))
     return idf_scores
+
+class HuffmanNode:
+    def __init__(self, char: Optional[str], freq: int):
+        self.char = char
+        self.freq = freq
+        self.left: Optional[HuffmanNode] = None
+        self.right: Optional[HuffmanNode] = None
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+
+def build_huffman_tree(text: str) -> HuffmanNode:
+    frequency = {}
+    for char in text:
+        frequency[char] = frequency.get(char, 0) + 1
+
+    heap = [HuffmanNode(char, freq) for char, freq in frequency.items()]
+    heapq.heapify(heap)
+
+    while len(heap) > 1:
+        node1 = heapq.heappop(heap)
+        node2 = heapq.heappop(heap)
+
+        merged = HuffmanNode(None, node1.freq + node2.freq)
+        merged.left = node1
+        merged.right = node2
+        heapq.heappush(heap, merged)
+
+    return heap[0]  # корень дерева
+
+
+def generate_codes(node: HuffmanNode, prefix: str = "", code_map: Optional[dict] = None) -> dict:
+    if code_map is None:
+        code_map = {}
+
+    if node.char is not None:
+        code_map[node.char] = prefix
+    else:
+        generate_codes(node.left, prefix + "0", code_map)
+        generate_codes(node.right, prefix + "1", code_map)
+
+    return code_map
+
+
+def huffman_encode(text: str) -> tuple[str, dict]:
+    root = build_huffman_tree(text)
+    codes = generate_codes(root)
+    encoded = ''.join(codes[char] for char in text)
+    return encoded, codes
