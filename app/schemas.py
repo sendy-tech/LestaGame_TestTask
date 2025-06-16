@@ -95,3 +95,10 @@ class UserRead(BaseModel):
 class UserCreate(BaseModel):
     username: str
     password: constr(min_length=8)
+
+# === STATUS&VERSION ===
+class StatusResponse(BaseModel):
+    status: str
+
+class VersionResponse(BaseModel):
+    version: str

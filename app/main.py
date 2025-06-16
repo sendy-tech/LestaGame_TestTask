@@ -18,6 +18,7 @@ from app.models.document import FileUpload, WordStat
 from app.routes.html_routes import router as html_router
 from app.routes.api_routes import router as api_router
 from app.services import get_text, term_frequency, inverse_document_frequency
+from app.schemas import StatusResponse, VersionResponse
 from app.crud.document_crud import get_user_files
 from app.crud.collection_crud import add_file_to_default_collection
 
@@ -186,14 +187,13 @@ async def list_user_files(request: Request, current_user: User = Depends(get_cur
     )
 
 
-@app.get("/version", include_in_schema=False)
+@app.get("/version", response_model=VersionResponse, include_in_schema=False)
 async def version():
-    return JSONResponse(content={"version": VERSION})
+    return {"version": VERSION}
 
-
-@app.get("/status", include_in_schema=False)
+@app.get("/status", response_model=StatusResponse, include_in_schema=False)
 async def status():
-    return JSONResponse(content={"status": "OK"})
+    return {"status": "OK"}
 
 
 @app.exception_handler(404)

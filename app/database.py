@@ -7,9 +7,15 @@ from sqlalchemy.orm import declarative_base
 load_dotenv()
 
 # Получение URL для подключения к базе данных
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("❌ DATABASE_URL is not set in .env")
+DB_USER = os.getenv("POSTGRES_USER")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
+DB_NAME = os.getenv("POSTGRES_DB")
+
+if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_NAME]):
+    raise ValueError("❌ Missing DB config variables")
+
+DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 
 # Преобразуем URL для использования с asyncpg драйвером
 DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
